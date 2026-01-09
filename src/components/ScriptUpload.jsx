@@ -62,30 +62,42 @@ export default function ScriptUpload({ onScriptParsed }) {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
         
+        // Sort items by Y position (descending, since PDF Y is bottom-up) then X position
+        const sortedItems = textContent.items
+          .filter(item => item.str.trim() !== '')
+          .sort((a, b) => {
+            const yDiff = b.transform[5] - a.transform[5];
+            if (Math.abs(yDiff) > 3) return yDiff;
+            return a.transform[4] - b.transform[4]; // Sort by X if same line
+          });
+        
         // Group text items by line using Y position
         const lines = [];
         let currentLine = { y: null, items: [] };
         
-        for (const item of textContent.items) {
+        for (const item of sortedItems) {
           // Get Y position from transform matrix [a, b, c, d, e, f] where e=x, f=y
           const y = item.transform[5];
-          const tolerance = 2; // Allow small variations in Y position
+          const tolerance = 3; // Allow small variations in Y position
           
           if (currentLine.y === null || Math.abs(y - currentLine.y) > tolerance) {
             // New line detected
             if (currentLine.items.length > 0) {
-              lines.push(currentLine.items.join(' '));
+              // Sort items by X position and join
+              currentLine.items.sort((a, b) => a.x - b.x);
+              lines.push(currentLine.items.map(i => i.str).join(' '));
             }
-            currentLine = { y: y, items: [item.str] };
+            currentLine = { y: y, items: [{ str: item.str, x: item.transform[4] }] };
           } else {
             // Same line
-            currentLine.items.push(item.str);
+            currentLine.items.push({ str: item.str, x: item.transform[4] });
           }
         }
         
         // Add the last line
         if (currentLine.items.length > 0) {
-          lines.push(currentLine.items.join(' '));
+          currentLine.items.sort((a, b) => a.x - b.x);
+          lines.push(currentLine.items.map(i => i.str).join(' '));
         }
         
         fullText += lines.join('\n') + '\n';
@@ -94,6 +106,18 @@ export default function ScriptUpload({ onScriptParsed }) {
       if (!fullText.trim()) {
         throw new Error('Could not extract text from PDF. The PDF may be image-based. Please use the "paste text manually" option.');
       }
+
+      // Clean up the text - normalize spaces and fix common PDF extraction issues
+      fullText = fullText
+        .replace(/[\u2010-\u2015\u2212\u2013\u2014]/g, '-') // Normalize dashes first
+        .replace(/\s+/g, ' ')           // Normalize multiple spaces to single space
+        .replace(/ ?\n ?/g, '\n')       // Clean spaces around newlines
+        .replace(/([<\[])/g, '\n$1')    // Ensure < and [ start on new lines
+        .replace(/- ?Turn/gi, '\n- Turn') // Ensure Turn lines start on new lines
+        .replace(/item:/gi, '\nitem:')  // Ensure item: lines start on new lines
+        .replace(/FLOOR /gi, '\nFLOOR ') // Ensure FLOOR lines start on new lines
+        .replace(/\n+/g, '\n')          // Clean up multiple newlines
+        .trim();
 
       // Parse the extracted text
       const parsed = parseScript(fullText);

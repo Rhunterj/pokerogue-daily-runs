@@ -1,9 +1,22 @@
 /**
+ * Normalizes text by replacing various dash/hyphen characters with standard hyphen
+ * @param {string} text - Text to normalize
+ * @returns {string} - Normalized text
+ */
+function normalizeDashes(text) {
+  // Replace en-dash, em-dash, minus sign, and other dash-like characters with standard hyphen
+  return text.replace(/[\u2010-\u2015\u2212\u2013\u2014]/g, '-');
+}
+
+/**
  * Parses script text and extracts floor data
  * @param {string} text - The script text to parse
  * @returns {Object} - Parsed script data with date and floors
  */
 export function parseScript(text) {
+  // Normalize the entire text first to handle PDF encoding issues
+  text = normalizeDashes(text);
+  
   const lines = text.split('\n');
   const floors = {};
   let currentFloor = null;
@@ -52,8 +65,9 @@ export function parseScript(text) {
       currentActions.push(line.replace(/^[•\s]+/, ''));
     } else if (currentFloor && line.startsWith('item:')) {
       currentActions.push(line);
-    } else if (currentFloor && line.startsWith('- Turn')) {
+    } else if (currentFloor && /^-\s*Turns?\s+\d/i.test(line)) {
       // Capture turn-by-turn instructions like "- Turn 1: thunder wave" or "- Turns 1-2: hurricane"
+      // Using regex to be more flexible with spacing and case
       currentActions.push(line);
     }
   }

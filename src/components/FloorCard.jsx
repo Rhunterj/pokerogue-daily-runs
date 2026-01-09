@@ -19,15 +19,18 @@ function getActionStyle(action) {
   
   // Turn instructions
   if (action.startsWith('- Turn')) {
-    const turnMatch = action.match(/- Turns? ([\d-]+): (.+)/i);
+    // Match both "Turn 1:" and "Turns 1-3:" and "Turns 1 - 3:" formats
+    const turnMatch = action.match(/- Turns? ([\d]+(?:\s*-\s*[\d]+)?): (.+)/i);
     if (turnMatch) {
+      // Normalize the turn number display (remove extra spaces around hyphen)
+      const turnNum = turnMatch[1].replace(/\s*-\s*/g, '-');
       return {
         type: 'turn',
         icon: <Swords className="w-4 h-4 flex-shrink-0" />,
         bgColor: 'rgba(96, 165, 250, 0.15)',
         borderColor: 'rgba(96, 165, 250, 0.3)',
         textColor: '#93c5fd',
-        turnNum: turnMatch[1],
+        turnNum: turnNum,
         moveText: turnMatch[2]
       };
     }
@@ -86,6 +89,8 @@ function ActionItem({ action }) {
   }
   
   if (style.type === 'turn') {
+    // Use "Turns" for ranges (contains hyphen), "Turn" for single turns
+    const turnLabel = style.turnNum.includes('-') ? 'Turns' : 'Turn';
     return (
       <div 
         className="rounded-lg px-3 py-2 border flex items-center gap-3 ml-4"
@@ -97,7 +102,7 @@ function ActionItem({ action }) {
             className="font-mono text-xs px-2 py-0.5 rounded"
             style={{ backgroundColor: 'rgba(96, 165, 250, 0.3)', color: '#93c5fd' }}
           >
-            Turn {style.turnNum}
+            {turnLabel} {style.turnNum}
           </span>
           <span className="text-sm text-white/90">{style.moveText}</span>
         </div>
