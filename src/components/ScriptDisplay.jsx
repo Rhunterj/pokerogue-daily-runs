@@ -4,13 +4,15 @@ import ProgressBar from './ProgressBar';
 import FloorCard from './FloorCard';
 import FloorNavigation from './FloorNavigation';
 import KeyFloors from './KeyFloors';
-import { getSortedFloors, calculateProgress, getKeyFloors } from '../utils/floorUtils';
+import CaughtPokemonSummary from './CaughtPokemonSummary';
+import { getSortedFloors, calculateProgress, getKeyFloors, getCaughtPokemon } from '../utils/floorUtils';
 
 export default function ScriptDisplay({ scriptData, currentFloor, completedFloors, onFloorChange, onToggleFloor, onUploadNew }) {
   const floors = getSortedFloors(scriptData.floors);
   const currentData = scriptData.floors[currentFloor];
   const progress = calculateProgress(completedFloors.size, floors.length);
   const keyFloors = getKeyFloors(floors, scriptData.floors);
+  const caughtPokemon = getCaughtPokemon(scriptData.floors);
 
   const handlePrevious = () => {
     onFloorChange(Math.max(floors[0], currentFloor - 1));
@@ -56,6 +58,11 @@ export default function ScriptDisplay({ scriptData, currentFloor, completedFloor
             keyFloors={keyFloors}
             currentFloor={currentFloor}
             completedFloors={completedFloors}
+            onFloorSelect={onFloorChange}
+          />
+
+          <CaughtPokemonSummary
+            caughtPokemon={caughtPokemon}
             onFloorSelect={onFloorChange}
           />
 

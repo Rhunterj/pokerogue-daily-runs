@@ -52,6 +52,9 @@ export function parseScript(text) {
       currentActions.push(line.replace(/^[•\s]+/, ''));
     } else if (currentFloor && line.startsWith('item:')) {
       currentActions.push(line);
+    } else if (currentFloor && line.startsWith('- Turn')) {
+      // Capture turn-by-turn instructions like "- Turn 1: thunder wave" or "- Turns 1-2: hurricane"
+      currentActions.push(line);
     }
   }
 
